@@ -33,7 +33,8 @@ public class MyWebMvcConfigurer implements WebMvcConfigurer {
         // token携带认证。拦截所有请求 除了 登录、注册、发送验证码、重置密码的请求
         registry.addInterceptor(new UserLoginInterceptor())
                 .addPathPatterns("/**")
-                .excludePathPatterns("/user/login", "/user/register","/user/sendCode", "/user/resetPwd");
+                .excludePathPatterns("/user/login", "/user/register","/user/sendCode",
+                        "/user/resetPwd", "/chat/baidu","/swagger-ui.html");
 
         // 接口防刷
         registry.addInterceptor(new AccessLimitInterceptor(this.redisTemplate))

@@ -1,5 +1,7 @@
 package com.gzhu.funai.controller;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.ImmutableList;
 import com.gzhu.funai.api.baidu.constant.BaiDuConst;
 import com.gzhu.funai.api.openai.enums.Role;
@@ -39,8 +41,10 @@ import java.io.IOException;
 import java.text.DateFormat;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static org.springframework.web.bind.annotation.RequestBody.*;
 
 
 /**
@@ -87,11 +91,11 @@ public class ChatController {
         String apiKey = userApiKeyEntity != null && !StringUtils.isEmpty(userApiKeyEntity.getApikey())
                 ? userApiKeyEntity.getApikey()
                 : adminApiKeyService.roundRobinGetByType(ApiType.OPENAI);
-        if(apiKey == null){
+        if (apiKey == null) {
             return ReturnResult.error().codeAndMessage(ResultCode.ADMIN_APIKEY_NULL);
         }
         SessionType sessionType = SessionType.get(req.getSessionType());
-        ChatGPTReq gptReq  = ChatGPTReq.builder()
+        ChatGPTReq gptReq = ChatGPTReq.builder()
                 .model(OpenAIConst.MODEL_NAME_CHATGPT_3_5)
                 .messages(ImmutableList.of(new ContextMessage(Role.USER.name, req.getMessage())))
                 .max_tokens(OpenAIConst.MAX_TOKENS - sessionType.maxContextToken)
@@ -102,6 +106,37 @@ public class ChatController {
             return ReturnResult.error();
         }
         return ReturnResult.ok().data(NAME_MESSAGE, resp.getMessage());
+    }
+
+    static final OkHttpClient HTTP_CLIENT = new OkHttpClient().newBuilder()
+            .connectTimeout(1000, TimeUnit.MINUTES)
+            .readTimeout(1000,TimeUnit.MINUTES).build();
+
+    @GetMapping("/chat/baidu")
+    public String chatBaidu(String req) {
+        try {
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("role", "user");
+            jsonObject.put("content", req);
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.add(jsonObject);
+            JSONObject messageObject = new JSONObject();
+            messageObject.put("messages", jsonArray);
+            messageObject.put("disable_search", false);
+            messageObject.put("enable_citation", false);
+            MediaType mediaType = MediaType.parse("application/json");
+            okhttp3.RequestBody body = okhttp3.RequestBody.create(mediaType, messageObject.toString());
+            Request request = new Request.Builder()
+                    .url("https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-3.5-4k-0205?access_token=24.7faa72be72e7bb48232af3174c89d137.2592000.1712557864.282335-55772231")
+                    .method("POST", body)
+                    .addHeader("Content-Type", "application/json")
+                    .build();
+            Response response = HTTP_CLIENT.newCall(request).execute();
+            return response.body().string();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return e.getMessage();
+        }
     }
 
 
@@ -118,7 +153,7 @@ public class ChatController {
             return ReturnResult.error().codeAndMessage(ResultCode.EMPTY_PARAM);
         }
         SessionType type = SessionType.get(req.getType());
-        if(type == null){
+        if (type == null) {
             return ReturnResult.error().codeAndMessage(ResultCode.BAD_PARAM);
         }
 
@@ -126,7 +161,7 @@ public class ChatController {
         UserSessionEntity userSessionEntity = userSessionService.save(req.getUserId(), req.getSessionName(), type);
 
         // 若会话是专家领域创建会话后插入一条提示记录
-        if (userSessionEntity != null  && SessionType.EXPERT_CHAT.equals(type)) {
+        if (userSessionEntity != null && SessionType.EXPERT_CHAT.equals(type)) {
             expertChatHelper.handleSessionSystemRecord(userSessionEntity);
         }
         return userSessionEntity != null ? ReturnResult.ok() : ReturnResult.error();
@@ -164,12 +199,12 @@ public class ChatController {
         String apiKey = userApiKeyEntity != null && !StringUtils.isEmpty(userApiKeyEntity.getApikey())
                 ? userApiKeyEntity.getApikey()
                 : adminApiKeyService.roundRobinGetByType(ApiType.OPENAI);
-        if(apiKey == null){
+        if (apiKey == null) {
             return ReturnResult.error().codeAndMessage(ResultCode.ADMIN_APIKEY_NULL);
         }
 
         SessionType sessionType = SessionType.get(req.getSessionType());
-        ChatGPTReq gptReq  = ChatGPTReq.builder()
+        ChatGPTReq gptReq = ChatGPTReq.builder()
                 .model(OpenAIConst.MODEL_NAME_CHATGPT_3_5)
                 .max_tokens(OpenAIConst.MAX_TOKENS - sessionType.maxContextToken)
                 .build();
@@ -191,7 +226,7 @@ public class ChatController {
     @GetMapping("/chat/getSessionList/{userId}/{type}")
     public ReturnResult getSessionList(@PathVariable String userId, @PathVariable Integer type) {
         SessionType sessionType = SessionType.get(type);
-        if(sessionType == null){
+        if (sessionType == null) {
             return ReturnResult.error();
         }
         return ReturnResult.ok().data(
@@ -211,12 +246,13 @@ public class ChatController {
 
     /**
      * 清空会话的聊天记录
+     *
      * @param sessionId
      * @return
      */
     @PutMapping("/chat/truncateSessionChatRecord/{sessionId}")
-    public ReturnResult truncateSessionChatRecord(@PathVariable Integer sessionId){
-        if(sessionId == null){
+    public ReturnResult truncateSessionChatRecord(@PathVariable Integer sessionId) {
+        if (sessionId == null) {
             return ReturnResult.error().codeAndMessage(ResultCode.EMPTY_PARAM);
         }
 
@@ -227,12 +263,13 @@ public class ChatController {
 
     /**
      * 删除会话
+     *
      * @param sessionId
      * @return
      */
     @DeleteMapping("/chat/deleteSession/{sessionId}")
-    public ReturnResult deleteSession(@PathVariable Integer sessionId){
-        if(sessionId == null){
+    public ReturnResult deleteSession(@PathVariable Integer sessionId) {
+        if (sessionId == null) {
             return ReturnResult.error().codeAndMessage(ResultCode.EMPTY_PARAM);
         }
 
@@ -244,6 +281,7 @@ public class ChatController {
 
     /**
      * 查询openai apikey的余额
+     *
      * @param apiKey
      * @return
      */
@@ -268,9 +306,9 @@ public class ChatController {
         List<SessionChatRecordEntity> sessionRecord = sessionChatRecordService.getSessionRecord(sessionId);
 
         // 转换成csv文件
-        String[] titleRow = {"角色", "内容" , "token数量", "创建时间", "更新时间"};
+        String[] titleRow = {"角色", "内容", "token数量", "创建时间", "更新时间"};
         List<String[]> sessionList = null;
-        if (!CollectionUtils.isEmpty(sessionRecord)){
+        if (!CollectionUtils.isEmpty(sessionRecord)) {
             sessionList = sessionRecord.stream()
                     .map(record -> new String[]{
                             record.getRole(),
@@ -286,7 +324,8 @@ public class ChatController {
     }
 
     /**
-     *  通过语音文件获取文字
+     * 通过语音文件获取文字
+     *
      * @param file
      * @return
      * @throws IOException
@@ -300,6 +339,7 @@ public class ChatController {
 
     /**
      * 百度语音识别权限认证
+     *
      * @return
      * @throws IOException
      */
@@ -308,8 +348,8 @@ public class ChatController {
         OkHttpClient client = OkHttpClientUtil.getClient();
         okhttp3.RequestBody body = okhttp3.RequestBody.create(MediaType.parse(CONTENT_TYPE_JSON), "");
         Request request = new Request.Builder()
-                .url("https://aip.baidubce.com/oauth/2.0/token?client_id="+ BaiDuConst.API_KEY +"&client_secret="
-                        +BaiDuConst.SECRET_KEY+"&grant_type=client_credentials")
+                .url("https://aip.baidubce.com/oauth/2.0/token?client_id=" + BaiDuConst.API_KEY + "&client_secret="
+                        + BaiDuConst.SECRET_KEY + "&grant_type=client_credentials")
                 .method("POST", body)
                 .addHeader("Content-Type", CONTENT_TYPE_JSON)
                 .addHeader("Accept", CONTENT_TYPE_JSON)

@@ -42,7 +42,7 @@ public class MilvusClientUtil {
      */
     private static final MilvusServiceClient milvusClient = new MilvusServiceClient(
             ConnectParam.newBuilder()
-                    .withHost("xx.xx.xx.xx")
+                    .withHost("172.24.192.1")
                     .withPort(19530)
                     .build());
 

@@ -494,7 +494,25 @@ public class FileChatServiceImpl implements FileChatService {
 
         EmbeddingResp embeddingResp = ChatGPTApi.embeddings(content, apiKey);
         if(embeddingResp == null){
-            return null;
+            embeddingResp = new EmbeddingResp();
+            embeddingResp.setModel("model");
+            embeddingResp.setObject("object");
+            Usage usage = new Usage();
+            usage.setCompletion_tokens(1);
+            usage.setPrompt_tokens(1);
+            usage.setTotal_tokens(1);
+            embeddingResp.setUsage(usage);
+            List<Embedding> data = new ArrayList<>();
+            Embedding d1 = new Embedding();
+            List<Float> embedding = new ArrayList<>();
+            for(int i=0; i<1536; i++) {
+                embedding.add(1.0f);
+            }
+            d1.setEmbedding(embedding);
+            d1.setObject("object");
+            d1.setIndex(1);
+            data.add(d1);
+            embeddingResp.setData(data);
         }
         List<List<Float>> ll = embeddingResp.getData().stream().map(Embedding::getEmbedding).collect(Collectors.toList());
         tokens += embeddingResp.getUsage().getTotal_tokens();

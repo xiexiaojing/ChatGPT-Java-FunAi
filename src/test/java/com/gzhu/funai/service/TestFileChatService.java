@@ -10,16 +10,21 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author zxw
@@ -41,7 +46,7 @@ public class TestFileChatService {
         adminApiKeyService.load();
         promptService.load();
         //生成File文件
-        File file = new File("D:\\！！笔记\\000学习\\6-专业前沿学习\\003-人工智能\\09-NLP相关论文\\14-chatgpt\\ChatGPT-SpringBoot\\src\\test\\java\\com\\gzhu\\funai\\service\\ICTAI2022_9_28___终稿.pdf");
+        File file = new File("C:\\test\\test.pdf");
 
         //File文件转MultipartFile
         FileInputStream input = null;
@@ -78,5 +83,24 @@ public class TestFileChatService {
         }
 
 
+    }
+
+
+    @Autowired
+    DataSourceProperties dataSourceProperties;
+    @Autowired
+    ApplicationContext applicationContext;
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    @Test
+    public void testDB(){
+        DataSource dataSource = applicationContext.getBean(DataSource.class);
+        System.out.println("数据库源："+dataSource);
+        System.out.println("类名："+dataSource.getClass().getName());
+        System.out.println("HikariDataSource 数据源："+dataSourceProperties);
+        //JdbcTemplate 封装一层函数可以直接使用
+        Map<String, Object> queryForMap = jdbcTemplate.queryForMap("SELECT * FROM sys_dbserver");
+        System.out.println("查询结果Map:"+queryForMap);
     }
 }
